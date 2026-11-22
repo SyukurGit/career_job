@@ -1,0 +1,90 @@
+"use client";
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { isTheme, storedTheme, THEME_COLORS, THEME_STORAGE_KEY } from "@/lib/theme.mjs";
+
+export type Theme = "light" | "dark";
+
+type ThemeContextValue = {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
+};
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function currentTheme(): Theme {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLORS[theme]);
+  window.dispatchEvent(new Event("themechange"));
+}
+
+function savedTheme(): Theme | null {
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return isTheme(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Keep the server and first client snapshots identical. The bootstrap script
+  // establishes the document class before paint; the effect adopts it after
+  // hydration without forcing React to rebuild theme-dependent controls.
+  const [theme, setThemeState] = useState<Theme>("dark");
+
+  useEffect(() => {
+    const initial = currentTheme();
+    setThemeState(initial);
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onSystemTheme = () => {
+      // Dark mode is the primary default unless the user explicitly chose light.
+      if (savedTheme()) return;
+      setThemeState("dark");
+      applyTheme("dark");
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY) return;
+      const next = storedTheme(event.newValue, "dark");
+      setThemeState(next);
+      applyTheme(next);
+    };
+
+    media.addEventListener("change", onSystemTheme);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      media.removeEventListener("change", onSystemTheme);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    applyTheme(next);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+      /* Private browsing/storage-disabled environments remain usable. */
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  }, [setTheme, theme]);
+
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme(): ThemeContextValue {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error("useTheme must be used inside ThemeProvider");
+  return context;
+}

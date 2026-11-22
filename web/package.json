@@ -1,0 +1,47 @@
+{
+  "name": "@dreamkur-job/web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "dreamkur -job — Smart job radar & AI career workspace.",
+  "scripts": {
+    "dev": "node server.mjs dev",
+    "build": "next build",
+    "start": "node server.mjs start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test \"tests/**/*.test.mjs\"",
+    "test:quick": "node --experimental-strip-types --test tests/lib/catalog-ui.test.mjs tests/lib/saved-jobs-persistence.test.mjs tests/lib/pipeline-insights-outreach.test.mjs tests/lib/portals-config.test.mjs tests/lib/portals-empty-copy.test.mjs tests/lib/profile-input-validation.test.mjs tests/lib/runtime-policy.test.mjs tests/lib/status-tone-contrast.test.mjs tests/lib/brand-text-contrast.test.mjs",
+    "test:browser": "node tests/browser-suites.mjs"
+  },
+  "engines": {
+    "node": "^22.13.0 || >=23.4.0"
+  },
+  "dependencies": {
+    "@paper-design/shaders-react": "^0.0.80",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "js-yaml": "^5.4.1",
+    "lucide-react": "^1.8.0",
+    "next": "16.4.6",
+    "pdfjs-dist": "^6.4.299",
+    "playwright-core": "^1.61.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-markdown": "^10.0.0",
+    "remark-gfm": "^4.0.0",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "25.9.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.18",
+    "tailwindcss": "^4.2.2",
+    "typescript": "7.0.2"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "^0.35.4"
+  }
+}

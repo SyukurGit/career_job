@@ -1,0 +1,50 @@
+// Every CLI with a documented headless invocation must be selectable in the web UI.
+//
+// This guards the drift that let Grok Build CLI go missing: it was wired into
+// lib/agent-cli.mjs (AGENT_CLIS), the scaffolder, docs/SUPPORTED_CLIS.md, the README
+// and .grok/skills/, yet KNOWN in web/src/lib/clis.ts never listed it — so the
+// web UI silently could not run on it. Nothing tied the two lists together.
+//
+// clis.ts is TypeScript and these tests are .mjs, so KNOWN is read as text. That
+// is deliberate: a regex over `bin: "..."` is enough to catch a forgotten entry,
+// and it keeps the guard free of a build step.
+//
+// Run:  node --test tests/lib/clis-coverage.test.mjs
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const WEB = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const CLIS_TS = join(WEB, "src", "lib", "clis.ts");
+
+/** Binaries KNOWN can spawn. */
+function knownBins(src) {
+  return new Set([...src.matchAll(/bin:\s*"([^"]+)"/g)].map((m) => m[1]));
+}
+
+const src = readFileSync(CLIS_TS, "utf8");
+
+test("KNOWN in clis.ts exposes the supported headless binaries", () => {
+  assert.ok(knownBins(src).size >= 7, "KNOWN parsed as near-empty — has clis.ts changed shape?");
+});
+
+test("Hermes Agent is wired up with one-shot args", () => {
+  assert.match(src, /id:\s*"hermes"/, "KNOWN is missing the hermes entry");
+  assert.match(src, /bin:\s*"hermes"/, "the hermes entry must spawn the `hermes` binary");
+  assert.match(src, /\["chat",\s*"-q",\s*p,\s*"--oneshot",\s*"-Q",\s*"--no-restore-cwd"\]/, "Hermes must use non-resuming quiet one-shot mode");
+});
+
+test("Grok Build CLI is wired up", () => {
+  // The regression that motivated this file. Named explicitly so a future
+  // reshuffle of the docs table can't quietly drop coverage for it.
+  assert.match(src, /id:\s*"grok"/, "KNOWN is missing the grok entry");
+  assert.match(src, /bin:\s*"grok"/, "the grok entry must spawn the `grok` binary");
+});
+
+test("no CLI is listed twice", () => {
+  const ids = [...src.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(ids).size, ids.length, `duplicate id in KNOWN: ${ids.join(", ")}`);
+});
